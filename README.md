@@ -40,7 +40,7 @@ This project investigates the application of Deep Learning to forecast air quali
 
 **Visual Validation:**
 
-![Forecast Plot](final_forecast_double_bilstm.png)
+![Forecast Plot](pictures/final_forecast_double_bilstm.png)
 
 ## Installation & Usage
 
