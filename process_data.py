@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 
 # --- CONFIGURATION ---
-INPUT_FILE = "data\hcmc_cmt8_pm25_2024-11-19_to_2026-01-18.csv" 
-OUTPUT_FILE = "data\hcmc_cmt8_cleaned_data_2.csv"
+INPUT_FILE = "data\hcmc_full_2018_2022.csv" 
+OUTPUT_FILE = "data\hcmc_lstm_ready.csv"
 
 # Physics Constraints
 MIN_PM25 = 0.0
