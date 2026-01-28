@@ -1,10 +1,9 @@
 # HCMC Air Quality Forecasting
 
-> A Deep Learning project analyzing and forecasting PM2.5 pollution levels in Ho Chi Minh City using a Stacked Bidirectional LSTM neural network.
+> A Deep Learning project analyzing and forecasting PM2.5 pollution levels in Ho Chi Minh City using neural network.
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange)
-![Status](https://img.shields.io/badge/Status-Thesis%20Complete-green)
 
 ## Project Overview
 This project investigates the application of Deep Learning to forecast air quality in Ho Chi Minh City. By analyzing 5 years of hourly PM2.5 data (2018–2022).
