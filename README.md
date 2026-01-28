@@ -22,9 +22,7 @@ This project investigates the application of Deep Learning to forecast air quali
 
 * **Input:** (Batch, 1, 14 Features)
 * **Layer 1:** `64 Units` + `Dropout(0.2)`
-    * *Role:* Extracts high-level temporal features from both directions (Past ↔ Future).
 * **Layer 2:** `32 Units` + `Dropout(0.2)`
-    * *Role:* Compresses features and identifies complex non-linear relationships.
 * **Output:** `Dense(1 Unit)`
     * *Role:* Regression output for PM2.5 concentration.
 
