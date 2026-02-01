@@ -1,48 +1,49 @@
-# HCMC Air Quality Forecasting
+# HCMC Air Quality PM2.5 Forecasting
 
-> A Deep Learning project analyzing and forecasting PM2.5 pollution levels in Ho Chi Minh City using neural network.
+> Predicting PM2.5 pollution levels using weather features and tree/sequence models. **Best Model: R² ≈ 0.66, MAE ≈ 5.45 µg/m³**
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange)
 
-## Project Overview
-This project investigates the application of Deep Learning to forecast air quality in Ho Chi Minh City. By analyzing 5 years of hourly PM2.5 data (2018–2022).
+## Quick Results
+| Model | MAE | R² | Status |
+|-------|-----|-------|--------|
+| **Ensemble (Optimized)** | ~5.45 | **~0.659** | Best Overall |
+| **CatBoost** | 5.45 | **0.6596** | Best Single Model |
+| XGBoost | 5.49 | 0.656 | Strong Baseline |
+| Bi-LSTM | 5.53 | 0.648 | Reference |
+| Linear Reg | 5.68 | 0.630 | Baseline |
 
+**Improvement**: ~+4.5% from baseline through weather integration + tree models + ensemble methods
 
-## Data & Processing
-* **Source:** US Diplomatic Post (Ho Chi Minh City) & OpenAQ (CMT8 Station Validation).
-* **Timeframe:** 2018–2022 (Hourly Resolution).
-* **Preprocessing Pipeline:**
-    * **Timezone Correction:** Converted UTC to Local Time (UTC+7) to align with traffic patterns.
-    * **Physics Check:** Removed outliers (<0 or >500 µg/m³).
-    * **Resampling:** Strict hourly grid enforcement with linear interpolation for small gaps (<4h).
-    * **Feature Engineering:** Generated Lag features (1h, 24h, 168h/1 week) and Cyclical Time features (Sin/Cos of Hour, Day, Month).
+## Data & Features (27 total)
+- **PM2.5**: Lags (1h, 2h, 3h, 24h, 168h) + rolling mean/std
+- **Weather**: Temperature, humidity, wind speed, precipitation
+- **Engineered**: Lag interactions, cyclic time encoding
+- **Period**: 2018-2022 HCMC, hourly resolution, ~34k clean records
 
-## Model Architecture
+## Models Evaluated
+1. Linear Regression (baseline)
+2. LSTM (flattened features)
+3. Bi-LSTM (temporal direction)
+4. XGBoost
+5. CatBoost
+6. Optimized weighted ensemble
+7. LSTM with sequence windows
 
-* **Input:** (Batch, 1, 14 Features)
-* **Layer 1:** `64 Units` + `Dropout(0.2)`
-* **Layer 2:** `32 Units` + `Dropout(0.2)`
-* **Output:** `Dense(1 Unit)`
-    * *Role:* Regression output for PM2.5 concentration.
+## Key Findings
+- Tree models outperform sequence models on this tabular setup
+- CatBoost slightly beats XGBoost as a single model
+- Optimized ensemble provides the best overall score
+- Diminishing returns above R² ~0.66 without more data or richer features
 
-## Results (Test Set 2022)
+## Files
+- `model_comparison.ipynb` - All models, feature importance, visualizations
+- `airq_analyze.ipynb` - Data exploration and visualization
+- `process_data.py` - Feature engineering pipeline (27 features)
+- `/data/hcmc_lstm_ready_weather.csv` - Final dataset
 
-| Model Architecture | MAE (µg/m³) | RMSE (µg/m³) | R² Score |
-| :--- | :--- | :--- | :--- |
-| **Linear Regression** | 5.71 | 8.54 | 0.628 |
-| **LSTM** | 5.62 | 8.33 | 0.646 |
-| **Bi-LSTM** | **5.51*** | **8.32*** | **0.646*** |
-
-*Note: Metrics reflect the best-performing configuration.*
-
-**Visual Validation:**
-
-![Forecast Plot](pictures/final_forecast_double_bilstm.png)
-
-## Installation & Usage
-
-### 1. Clone the Repo
-```bash
-git clone [https://github.com/yourusername/hcmc-air-quality-lstm.git](https://github.com/yourusername/hcmc-air-quality-lstm.git)
-cd hcmc-air-quality-lstm
+## Next Steps
+- Add more data (other cities + `city` feature)
+- Add external signals (traffic, holidays)
+- Extend time period

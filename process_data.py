@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 
 # --- CONFIGURATION ---
-INPUT_FILE = "data\hcmc_full_2018_2022.csv" 
-OUTPUT_FILE = "data\hcmc_lstm_ready.csv"
+INPUT_FILE = "data/hcmc_pm25_weather_2018_2022.csv"  # NEW: Weather-enriched dataset
+OUTPUT_FILE = "data/hcmc_lstm_ready_weather.csv"     # NEW: Output with weather features
 
 # Physics Constraints
 MIN_PM25 = 0.0
@@ -20,26 +20,21 @@ def run_pipeline():
     print("\n[Step 1] Loading Data...")
     df = pd.read_csv(INPUT_FILE)
     
-    # Fix Timezones
-    if 'datetime' in df.columns:
-        df['dt'] = pd.to_datetime(df['datetime'], utc=True)
-    elif 'dt' in df.columns:
-        df['dt'] = pd.to_datetime(df['dt'], utc=True)
-    elif 'period' in df.columns:
-        df['dt'] = df['period'].apply(lambda x: eval(x).get('datetimeFrom', {}).get('utc') if isinstance(x, str) else x)
-        df['dt'] = pd.to_datetime(df['dt'], utc=True)
-
-    df['dt'] = df['dt'].dt.tz_convert('Asia/Ho_Chi_Minh')
+    # Convert datetime
+    df['dt'] = pd.to_datetime(df['datetime'])
     df = df.set_index('dt').sort_index()
     
-    # Force 'value' to be numeric
-    df['value'] = pd.to_numeric(df['value'], errors='coerce')
+    # Select columns (pm25 + weather features)
+    # Keep: pm25, temperature, humidity, wind_speed, wind_direction, precipitation
+    value_cols = ['pm25', 'temperature', 'humidity', 'wind_speed', 'wind_direction', 'precipitation']
+    available_cols = [col for col in value_cols if col in df.columns]
+    df = df[available_cols]
     
-    # --- CRITICAL FIX 1: Drop EVERYTHING except 'value' ---
-    # This prevents "Phantom Columns" (like latitude/ID) from causing NaNs later
-    df = df[['value']]
+    # Rename pm25 to value for consistency
+    df = df.rename(columns={'pm25': 'value'})
     
     print(f"   > Loaded {len(df)} rows.")
+    print(f"   > Available features: {list(df.columns)}")
 
     # ---------------------------------------------------------
     # STEP 2: CLEANING
@@ -82,18 +77,38 @@ def run_pipeline():
     # ---------------------------------------------------------
     print("\n[Step 3] Generating Features...")
     
-    # Lags
+    # === PM2.5 LAG FEATURES ===
     df['lag_1h'] = df['value'].shift(1)
     df['lag_2h'] = df['value'].shift(2)
     df['lag_3h'] = df['value'].shift(3)
     df['lag_24h'] = df['value'].shift(24)
     df['lag_168h'] = df['value'].shift(168)
     
-    # Rolling
+    # === PM2.5 ROLLING FEATURES ===
     df['roll_mean_24h'] = df['value'].rolling(window=24).mean()
     df['roll_std_24h']  = df['value'].rolling(window=24).std()
     
-    # Time Features
+    # === WEATHER LAG FEATURES ===
+    if 'temperature' in df.columns:
+        df['temp_lag_1h'] = df['temperature'].shift(1)
+        df['temp_lag_24h'] = df['temperature'].shift(24)
+    
+    if 'humidity' in df.columns:
+        df['humid_lag_1h'] = df['humidity'].shift(1)
+        df['humid_lag_24h'] = df['humidity'].shift(24)
+    
+    if 'wind_speed' in df.columns:
+        df['wind_lag_1h'] = df['wind_speed'].shift(1)
+        df['wind_lag_24h'] = df['wind_speed'].shift(24)
+    
+    # === INTERACTION FEATURES ===
+    if 'temperature' in df.columns and 'humidity' in df.columns:
+        df['temp_humid_interaction'] = df['temperature'] * df['humidity'] / 100
+    
+    if 'wind_speed' in df.columns and 'precipitation' in df.columns:
+        df['wind_precip_interaction'] = df['wind_speed'] * (df['precipitation'] + 0.1)
+    
+    # === TIME FEATURES ===
     df['hour'] = df.index.hour
     df['day_of_week'] = df.index.dayofweek
     df['month'] = df.index.month
@@ -120,8 +135,8 @@ def run_pipeline():
         print("   Checking which column has NaNs:")
         print(df.isna().sum()) 
     else:
-        # Save
-        final_cols = [
+        # Save - dynamically include all generated features
+        base_cols = [
             'value', 
             'lag_1h', 'lag_2h', 'lag_3h', 'lag_24h', 'lag_168h',
             'roll_mean_24h', 'roll_std_24h',
@@ -130,11 +145,21 @@ def run_pipeline():
             'month_sin', 'month_cos'
         ]
         
+        # Add weather features that exist
+        weather_cols = ['temperature', 'humidity', 'wind_speed', 'wind_direction', 'precipitation',
+                       'temp_lag_1h', 'temp_lag_24h', 'humid_lag_1h', 'humid_lag_24h',
+                       'wind_lag_1h', 'wind_lag_24h', 'temp_humid_interaction', 'wind_precip_interaction']
+        
+        # Only include columns that actually exist in the dataframe
+        final_cols = base_cols + [col for col in weather_cols if col in df_final.columns]
+        
         df_final = df_final[final_cols].reset_index()
         df_final['datetime'] = df_final['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
         
         df_final.to_csv(OUTPUT_FILE, index=False)
         print(f"\n SUCCESS! Saved to {OUTPUT_FILE}")
+        print(f"   > Total features: {len(final_cols)}")
+        print(f"   > Features: {final_cols[:5]}... (+{len(final_cols)-5} more)")
 
 if __name__ == "__main__":
     run_pipeline()
