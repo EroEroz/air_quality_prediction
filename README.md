@@ -31,14 +31,14 @@ This project investigates the application of Deep Learning to forecast air quali
 | Model Architecture | MAE (µg/m³) | RMSE (µg/m³) | R² Score |
 | :--- | :--- | :--- | :--- |
 | **Linear Regression** | 5.71 | 8.54 | 0.628 |
-| **LSTM** | 5.62 | 8.33 | 0.646 |
-| **Bi-LSTM** | **5.51*** | **8.32*** | **0.646*** |
+| **LSTM** | 5.60 | 8.35 | 0.644 |
+| **Bi-LSTM** | **5.56** | **8.31** | **0.647** |
 
-*Note: Metrics reflect the best-performing configuration.*
+*Note: Metrics reflect the latest run with fixed seeds.*
 
 **Visual Validation:**
 
-![Forecast Plot](pictures/final_forecast_double_bilstm.png)
+![Forecast Plot](pictures/output.png)
 
 ## Installation & Usage
 
