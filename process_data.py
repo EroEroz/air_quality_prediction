@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 
 # --- CONFIGURATION ---
-INPUT_FILE = "data\hcmc_full_2018_2022.csv" 
-OUTPUT_FILE = "data\hcmc_lstm_ready.csv"
+INPUT_FILE = "data\NYC Data\Air_Quality.csv" 
+OUTPUT_FILE = "data\NYC Data\Air_Quality_lstm_ready.csv"
 
 # Physics Constraints
 MIN_PM25 = 0.0
