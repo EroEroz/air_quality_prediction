@@ -2,8 +2,28 @@ import pandas as pd
 import numpy as np
 
 # --- CONFIGURATION ---
+<<<<<<< Updated upstream
 INPUT_FILE = "data\NYC Data\Air_Quality.csv" 
 OUTPUT_FILE = "data\NYC Data\Air_Quality_lstm_ready.csv"
+=======
+INPUT_FILE = r"data\new\hcmc_weather_and_aqi.csv"
+WEATHER_FILE = r"data\hcmc_weather.csv"
+OUTPUT_LINEAR_FILE = r"data\Clean For Model\Air_Quality_linear_ready2.csv"
+OUTPUT_LSTM_FILE = r"data\Clean For Model\Air_Quality_lstm_ready2.csv"
+
+WEATHER_COLS = [
+    'temperature_2m', 'relative_humidity_2m', 'wind_speed_10m',
+    'wind_direction_10m', 'surface_pressure', 'precipitation', 'cloud_cover'
+]
+>>>>>>> Stashed changes
+
+# Additional Air Pollutants (besides PM2.5 which is the target)
+AIR_POLLUTANT_COLS = [
+    'pm10', 'carbon_monoxide', 'nitrogen_dioxide', 'sulphur_dioxide', 'ozone'
+]
+
+# Combined environmental features
+ENVIRONMENTAL_COLS = WEATHER_COLS + AIR_POLLUTANT_COLS
 
 # Physics Constraints
 MIN_PM25 = 0.0
@@ -32,14 +52,39 @@ def run_pipeline():
     df['dt'] = df['dt'].dt.tz_convert('Asia/Ho_Chi_Minh')
     df = df.set_index('dt').sort_index()
     
-    # Force 'value' to be numeric
-    df['value'] = pd.to_numeric(df['value'], errors='coerce')
+    # --- AUTO-DETECT PM2.5 COLUMN ---
+    # Support both 'value' and 'pm2_5' column names
+    if 'pm2_5' in df.columns and 'value' not in df.columns:
+        print("   > Detected 'pm2_5' column, renaming to 'value'")
+        df['value'] = pd.to_numeric(df['pm2_5'], errors='coerce')
+    elif 'value' in df.columns:
+        df['value'] = pd.to_numeric(df['value'], errors='coerce')
+    else:
+        raise ValueError("Neither 'value' nor 'pm2_5' column found in INPUT_FILE")
     
-    # --- CRITICAL FIX 1: Drop EVERYTHING except 'value' ---
-    # This prevents "Phantom Columns" (like latitude/ID) from causing NaNs later
-    df = df[['value']]
+    # --- FILTER OUT ROWS WITH MISSING PM2.5 ---
+    rows_before_filter = len(df)
+    df = df.dropna(subset=['value'])
+    rows_after_filter = len(df)
+    if rows_before_filter > rows_after_filter:
+        print(f"   > Removed {rows_before_filter - rows_after_filter} rows with missing PM2.5")
+        print(f"   > Date range with PM2.5: {df.index.min()} to {df.index.max()}")
     
-    print(f"   > Loaded {len(df)} rows.")
+    # --- CHECK IF ENVIRONMENTAL COLUMNS ALREADY PRESENT ---
+    env_cols_present = [col for col in ENVIRONMENTAL_COLS if col in df.columns]
+    
+    if len(env_cols_present) >= len(WEATHER_COLS):
+        # Environmental data already in file - keep them!
+        print(f"   > Environmental data detected in INPUT_FILE ({len(env_cols_present)}/{len(ENVIRONMENTAL_COLS)} columns)")
+        keep_cols = ['value'] + [col for col in ENVIRONMENTAL_COLS if col in df.columns]
+        df = df[keep_cols]
+        print(f"   > Keeping columns: {df.columns.tolist()}")
+    else:
+        # No environmental data - will merge later from WEATHER_FILE
+        print(f"   > No environmental data in INPUT_FILE ({len(env_cols_present)}/{len(ENVIRONMENTAL_COLS)} columns)")
+        df = df[['value']]
+    
+    print(f"   > Loaded {len(df)} rows with columns: {df.columns.tolist()}")
 
     # ---------------------------------------------------------
     # STEP 2: CLEANING
@@ -78,6 +123,57 @@ def run_pipeline():
         print(df.isna().sum())
 
     # ---------------------------------------------------------
+<<<<<<< Updated upstream
+=======
+    # STEP 2.5: MERGE ENVIRONMENTAL DATA (AUTO-DETECT)
+    # ---------------------------------------------------------
+    print("\n[Step 2.5] Checking Environmental Data...")
+    
+    # Check if environmental columns are already in the current dataframe
+    env_cols_present = [col for col in ENVIRONMENTAL_COLS if col in df.columns]
+    
+    if len(env_cols_present) >= len(WEATHER_COLS):
+        # Environmental data already present (loaded from INPUT_FILE in STEP 1)
+        print(f"   ✓ Environmental data already present ({len(env_cols_present)}/{len(ENVIRONMENTAL_COLS)} columns)")
+        print(f"   > Columns available: {env_cols_present}")
+        print(f"   > Skipping WEATHER_FILE merge...")
+        
+        # Interpolate any small gaps in environmental data
+        for col in env_cols_present:
+            df[col] = df[col].interpolate(method='linear', limit=6)
+        
+        env_nans = df[env_cols_present].isna().sum()
+        print(f"   > Environmental features ready. NaNs remaining:\n{env_nans}")
+        
+    else:
+        # Environmental data NOT in dataframe, load from WEATHER_FILE (weather only)
+        print(f"   ✗ Environmental data not found in INPUT_FILE ({len(env_cols_present)}/{len(ENVIRONMENTAL_COLS)} columns)")
+        print(f"   > Loading weather from WEATHER_FILE: {WEATHER_FILE}")
+        
+        df_weather = pd.read_csv(WEATHER_FILE)
+        df_weather['datetime'] = pd.to_datetime(df_weather['datetime'])
+        df_weather = df_weather.set_index('datetime')
+        # Localize weather to HCMC timezone to match PM2.5 index
+        df_weather.index = df_weather.index.tz_localize('Asia/Ho_Chi_Minh')
+        
+        # Merge on datetime index
+        df = df.join(df_weather[WEATHER_COLS], how='left')
+        
+        # Interpolate any small gaps in weather data
+        for col in WEATHER_COLS:
+            df[col] = df[col].interpolate(method='linear', limit=6)
+        
+        weather_nans = df[WEATHER_COLS].isna().sum()
+        print(f"   > Weather features merged. NaNs remaining:\n{weather_nans}")
+        
+        env_cols_present = WEATHER_COLS
+    
+    # Drop rows where essential environmental data is still missing
+    df = df.dropna(subset=env_cols_present)
+    print(f"   > Rows after environmental data processing: {len(df)}")
+
+    # ---------------------------------------------------------
+>>>>>>> Stashed changes
     # STEP 3: FEATURES
     # ---------------------------------------------------------
     print("\n[Step 3] Generating Features...")
@@ -120,13 +216,28 @@ def run_pipeline():
         print("   Checking which column has NaNs:")
         print(df.isna().sum()) 
     else:
+<<<<<<< Updated upstream
         # Save
         final_cols = [
             'value', 
             'lag_1h', 'lag_2h', 'lag_3h', 'lag_24h', 'lag_168h',
+=======
+        # Detect which environmental columns are actually present
+        env_cols_available = [col for col in ENVIRONMENTAL_COLS if col in df_final.columns]
+        print(f"   > Environmental columns to save: {env_cols_available}")
+        
+        # Save linear dataset (keeps all engineered features + environmental data)
+        linear_cols = [
+            'value', 'target_24h_avg', 'target_category',
+            'lag_1h', 'lag_2h', 'lag_3h', 'lag_6h', 'lag_12h', 'lag_24h', 'lag_48h', 'lag_168h',
+            'diff_1h', 'diff_24h',
+            'roll_mean_6h', 'roll_std_6h',
+            'roll_mean_12h', 'roll_std_12h',
+>>>>>>> Stashed changes
             'roll_mean_24h', 'roll_std_24h',
             'hour_sin', 'hour_cos', 
             'day_sin', 'day_cos', 
+<<<<<<< Updated upstream
             'month_sin', 'month_cos'
         ]
         
@@ -135,6 +246,36 @@ def run_pipeline():
         
         df_final.to_csv(OUTPUT_FILE, index=False)
         print(f"\n SUCCESS! Saved to {OUTPUT_FILE}")
+=======
+            'month_sin', 'month_cos',
+            'is_dry_season'
+        ] + env_cols_available
+        
+        df_linear = df_final[linear_cols].reset_index()
+        df_linear['datetime'] = df_linear['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        df_linear.to_csv(OUTPUT_LINEAR_FILE, index=False)
+
+        # Save LSTM dataset (raw value + rolling/ewm stats + time + environmental data)
+        lstm_cols = [
+            'value', 'target_24h_avg', 'target_category',
+            'roll_mean_6h', 'roll_std_6h',
+            'roll_mean_12h', 'roll_std_12h',
+            'roll_mean_24h', 'roll_std_24h',
+            'ewm_mean_12h', 'ewm_mean_24h',
+            'hour_sin', 'hour_cos',
+            'day_sin', 'day_cos',
+            'month_sin', 'month_cos',
+            'is_dry_season'
+        ] + env_cols_available
+        df_lstm = df_final[lstm_cols].reset_index()
+        df_lstm['datetime'] = df_lstm['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        df_lstm.to_csv(OUTPUT_LSTM_FILE, index=False)
+
+        print(f"\n SUCCESS! Saved linear dataset to {OUTPUT_LINEAR_FILE}")
+        print(f"          Columns: {len(linear_cols)} features + datetime")
+        print(f" SUCCESS! Saved LSTM dataset to   {OUTPUT_LSTM_FILE}")
+        print(f"          Columns: {len(lstm_cols)} features + datetime")
+>>>>>>> Stashed changes
 
 if __name__ == "__main__":
     run_pipeline()
