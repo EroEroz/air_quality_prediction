@@ -4,11 +4,11 @@ import os
 import predictor
 
 # Serve the website/ folder as static files
-WEBSITE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+WEBSITE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 app = Flask(
     __name__,
-    static_folder=os.path.join(WEBSITE_DIR, "website"),
+    static_folder=WEBSITE_DIR,
     static_url_path="",
 )
 CORS(app)

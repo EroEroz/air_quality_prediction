@@ -1,6 +1,6 @@
 /* global L */
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = "";
 
 // HCMC center coordinates
 const HCMC_CENTER = [10.7769, 106.7009];
