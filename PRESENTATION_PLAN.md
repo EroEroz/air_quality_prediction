@@ -14,7 +14,7 @@
 - **Problem:** Increasing PM2.5 pollution in HCMC poses serious public health risks.
 - **Goal:** Build an accurate time-series model to classify air quality and warn citizens before conditions become hazardous.
 - **Application:** Citizens, city planners, and health organizations benefit from early "Poor" air quality alerts.
-- **Scope:** Focused on HCMC urban area using 5 years of historical station data (OpenAQ & US Embassy, 2018–2022).
+- **Scope:** Focused on HCMC urban area using 3 years of historical station data.
 
 ---
 
