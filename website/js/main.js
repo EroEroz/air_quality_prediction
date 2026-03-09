@@ -1,6 +1,6 @@
 // AirPulse HCMC — Main Application Logic
 // API_BASE is declared in map.js — reuse it
-/* global API_BASE, renderForecastChart, updateHeatIntensity */
+/* global API_BASE, renderAvgForecast, updateHeatIntensity */
 
 // ── Current Status ────────────────────────────────────────────────────────────
 async function loadCurrentStatus() {
@@ -100,9 +100,9 @@ function showResult(data) {
     // PM2.5
     pm25El.textContent = data.pm25_current !== null ? `${data.pm25_current}` : "—";
 
-    // Render chart
-    if (data.forecast_24h && data.forecast_24h.length) {
-        renderForecastChart(data.forecast_24h);
+    // Render avg forecast panel
+    if (data.avg_pm25_24h !== undefined && data.avg_pm25_24h !== null) {
+        renderAvgForecast(data.avg_pm25_24h, data.category);
         document.getElementById("chartSection").scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
@@ -119,32 +119,11 @@ function setBar(fillId, pctId, value) {
 
 // ── Demo Prediction (offline fallback) ───────────────────────────────────────
 function getDemoPrediction() {
-    const base = 24.5;
-    const forecast_24h = [];
-    const now = new Date();
-    const nowH = now.getHours();
-
-    for (let i = 0; i < 24; i++) {
-        const h = (nowH + i) % 24;
-        let mult = 1.0;
-        if (h >= 7 && h <= 9) mult = 1.22;
-        if (h >= 17 && h <= 19) mult = 1.18;
-        if (h >= 2 && h <= 5) mult = 0.75;
-
-        const pm25 = +(base * mult + (Math.random() * 4 - 2)).toFixed(1);
-        forecast_24h.push({
-            hour: h,
-            label: `+${i}h`,
-            pm25,
-            category: pm25 < 12 ? "Good" : pm25 < 35 ? "Moderate" : "Poor",
-        });
-    }
-
     return {
         category: "Moderate",
         probabilities: { Good: 22.5, Moderate: 61.3, Poor: 16.2 },
-        pm25_current: base,
-        forecast_24h,
+        pm25_current: 24.5,
+        avg_pm25_24h: 24.5,
     };
 }
 
@@ -157,3 +136,110 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Expose to window for onclick attribute in HTML
 window.runPrediction = runPrediction;
+
+// ── Day-Period Prediction ─────────────────────────────────────────────────────
+let _dpPeriod = "morning";
+
+function setDpPeriod(btn) {
+    document.querySelectorAll(".dp-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    _dpPeriod = btn.dataset.period;
+}
+
+async function runDayPeriodPrediction() {
+    const dateVal = document.getElementById("dpDate").value;
+    if (!dateVal) {
+        alert("Please select a date first.");
+        return;
+    }
+
+    const btn = document.getElementById("dpPredictBtn");
+    const spinner = document.getElementById("dpSpinner");
+    const textEl = btn.querySelector(".btn-text");
+
+    btn.disabled = true;
+    spinner.classList.add("active");
+    textEl.textContent = "Predicting…";
+
+    try {
+        const res = await fetch(`${API_BASE}/api/day-period`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: dateVal, period: _dpPeriod }),
+        });
+        const json = await res.json();
+        if (json.status === "ok") {
+            renderDpResult(json.data);
+        } else {
+            throw new Error(json.message || "Unknown error");
+        }
+    } catch (err) {
+        console.warn("Day-period prediction failed:", err.message);
+        renderDpResult({
+            date: dateVal, period: _dpPeriod,
+            period_label: _dpPeriod + " (demo)",
+            category: "Moderate",
+            probabilities: { Good: 28.4, Moderate: 52.1, Poor: 19.5 },
+        });
+    } finally {
+        btn.disabled = false;
+        spinner.classList.remove("active");
+        textEl.textContent = "Predict";
+    }
+}
+
+function renderDpResult(data) {
+    const container = document.getElementById("dpResult");
+    container.classList.remove("hidden");
+
+    let color, bgColor;
+    if (data.category === "Good") {
+        color = "#4ade80"; bgColor = "rgba(74,222,128,0.12)";
+    } else if (data.category === "Moderate") {
+        color = "#facc15"; bgColor = "rgba(250,204,21,0.12)";
+    } else {
+        color = "#f87171"; bgColor = "rgba(248,113,113,0.12)";
+    }
+
+    const fmt = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    const dateLabel = fmt.format(new Date(data.date + "T12:00:00"));
+
+    const p = data.probabilities;
+    container.innerHTML = `
+      <div class="dp-result-header">
+        <div class="dp-meta">
+          <span class="dp-meta-date">${dateLabel}</span>
+          <span class="dp-meta-period">${data.period_label}</span>
+        </div>
+        <span class="dp-cat-badge" style="background:${bgColor};color:${color};border:1px solid ${color}40;">${data.category}</span>
+      </div>
+      <div class="dp-prob-bars">
+        ${dpBar("Good", "#4ade80", p.Good)}
+        ${dpBar("Moderate", "#facc15", p.Moderate)}
+        ${dpBar("Poor", "#f87171", p.Poor)}
+      </div>
+    `;
+
+    // Animate bars
+    requestAnimationFrame(() => {
+        container.querySelectorAll(".prob-fill").forEach(el => {
+            el.style.transition = "width 0.9s cubic-bezier(0.34,1.1,0.64,1)";
+        });
+    });
+
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function dpBar(label, color, value) {
+    const cls = label === "Good" ? "good-fill" : label === "Moderate" ? "mod-fill" : "poor-fill";
+    const textCls = label === "Good" ? "good-text" : label === "Moderate" ? "mod-text" : "poor-text";
+    return `
+      <div class="dp-prob-row">
+        <span class="dp-prob-name ${textCls}">${label}</span>
+        <div class="prob-track"><div class="prob-fill ${cls}" style="width:${Math.min(100, value)}%"></div></div>
+        <span class="dp-prob-pct">${value}%</span>
+      </div>`;
+}
+
+window.setDpPeriod = setDpPeriod;
+window.runDayPeriodPrediction = runDayPeriodPrediction;

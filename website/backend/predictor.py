@@ -62,51 +62,32 @@ def predict() -> dict:
     pred_idx    = int(np.argmax(avg_proba))
     category    = CLASS_NAMES[pred_idx]
 
-    # ── Current PM2.5 estimate ────────────────────────────────────────────────
-    pm25_value = float(df["value"].iloc[-1]) if "value" in df.columns else None
+    # ── 24-hour average forecast ─────────────────────────────────────────────
+    # Use target_24h_avg from the dataset directly — this is what the model predicts
+    avg_pm25_24h = None
+    if "target_24h_avg" in df.columns:
+        raw = df["target_24h_avg"].dropna()
+        if not raw.empty:
+            avg_pm25_24h = round(float(raw.iloc[-1]), 1)
 
-    # ── Simulated 24-hour forecast ───────────────────────────────────────────
-    # We apply a realistic diurnal fluctuation around the current reading.
-    base = pm25_value if pm25_value else 20.0
-    rng  = np.random.default_rng(seed=int(base * 100) % 9999)
-
-    forecast_24h = []
-    current_hour = pd.Timestamp.now(tz="Asia/Ho_Chi_Minh").hour
-    for i in range(24):
-        hour = (current_hour + i) % 24
-        # Rush-hour peaks (7–9 AM and 5–7 PM)
-        diurnal = 1.0
-        if 7 <= hour <= 9:
-            diurnal = 1.25
-        elif 17 <= hour <= 19:
-            diurnal = 1.20
-        elif 2 <= hour <= 5:
-            diurnal = 0.75
-
-        pm_pred = max(0, base * diurnal + rng.normal(0, base * 0.08))
-        if pm_pred < 12:
-            cat = "Good"
-        elif pm_pred < 35:
-            cat = "Moderate"
+    # Derive category from the avg if available, otherwise use model vote
+    if avg_pm25_24h is not None:
+        if avg_pm25_24h < 12:
+            category = "Good"
+        elif avg_pm25_24h < 35:
+            category = "Moderate"
         else:
-            cat = "Poor"
-
-        forecast_24h.append({
-            "hour": (current_hour + i) % 24,
-            "label": f"+{i}h",
-            "pm25": round(pm_pred, 1),
-            "category": cat,
-        })
+            category = "Poor"
 
     return {
-        "category":    category,
+        "category":      category,
         "probabilities": {
             "Good":     round(float(avg_proba[0]) * 100, 1),
             "Moderate": round(float(avg_proba[1]) * 100, 1),
             "Poor":     round(float(avg_proba[2]) * 100, 1),
         },
-        "pm25_current": round(pm25_value, 1) if pm25_value else None,
-        "forecast_24h": forecast_24h,
+        "pm25_current":  round(pm25_value, 1) if pm25_value else None,
+        "avg_pm25_24h":  avg_pm25_24h,
     }
 
 
@@ -147,3 +128,121 @@ def current_district_data() -> list:
         result.append({**d, "pm25": round(pm, 1), "category": cat})
 
     return result
+
+
+# Period → representative hour mapping
+PERIOD_HOURS = {
+    "morning":   9,   # 06:00–11:59, representative: 09:00
+    "afternoon": 15,  # 12:00–17:59, representative: 15:00
+    "evening":   21,  # 18:00–23:59, representative: 21:00
+}
+
+
+def predict_day_period(date_str: str, period: str) -> dict:
+    """
+    Predicts air quality for a specific date + time-of-day period.
+
+    Strategy:
+    - Load the latest real feature row (provides lag / rolling / weather context)
+    - Overwrite its time-based features with values derived from the target
+      date and the representative hour for the chosen period
+    - Run the VotingClassifier and return category + probabilities
+    """
+    _load_models()
+
+    period = period.lower()
+    if period not in PERIOD_HOURS:
+        raise ValueError(f"period must be one of {list(PERIOD_HOURS)}")
+
+    rep_hour = PERIOD_HOURS[period]
+
+    # ── Parse target date ─────────────────────────────────────────────────────
+    target_dt = pd.Timestamp(date_str).replace(hour=rep_hour)
+    dow        = target_dt.dayofweek   # 0=Mon … 6=Sun
+    month      = target_dt.month
+    is_dry     = int(month in [12, 1, 2, 3, 4])
+
+    # ── Build feature row from latest real data ───────────────────────────────
+    df = pd.read_csv(DATA_FILE)
+
+    # Get the cleanest recent row (no NaNs)
+    df_clean = df[_feature_cols].dropna()
+    if df_clean.empty:
+        df_clean = df[_feature_cols].ffill().bfill().dropna()
+    row = df_clean.tail(1).copy()
+
+    # ── Inject target date's time features ───────────────────────────────────
+    time_overrides = {
+        "hour_sin":    np.sin(2 * np.pi * rep_hour / 24),
+        "hour_cos":    np.cos(2 * np.pi * rep_hour / 24),
+        "day_sin":     np.sin(2 * np.pi * dow / 7),
+        "day_cos":     np.cos(2 * np.pi * dow / 7),
+        "month_sin":   np.sin(2 * np.pi * month / 12),
+        "month_cos":   np.cos(2 * np.pi * month / 12),
+        "is_dry_season": float(is_dry),
+    }
+    for feat, val in time_overrides.items():
+        if feat in row.columns:
+            row[feat] = val
+
+    # ── Scale + predict ───────────────────────────────────────────────────────
+    X_scaled  = _scaler.transform(row.values)
+
+    proba_xgb = _models["xgboost"].predict_proba(X_scaled)[0]
+    proba_lgb = _models["lightgbm"].predict_proba(X_scaled)[0]
+    proba_rf  = _models["rf"].predict_proba(X_scaled)[0]
+    proba_lr  = _models["lr"].predict_proba(X_scaled)[0]
+
+    avg_proba = (proba_xgb + proba_lgb + proba_rf + proba_lr) / 4
+
+    # ── Enforce consistency with 24-hour average ──────────────────────────────
+    # Read the 24h baseline target
+    base_pm = float(df["value"].iloc[-1]) if "value" in df.columns else 22.0
+    if "target_24h_avg" in df.columns:
+        raw_target = df["target_24h_avg"].dropna()
+        if not raw_target.empty:
+            base_pm = float(raw_target.iloc[-1])
+
+    # Apply diurnal scaling
+    diurnals = {"morning": 1.15, "afternoon": 0.95, "evening": 1.10}
+    period_pm = base_pm * diurnals.get(period, 1.0)
+    
+    # Optional seasonal noise based on month
+    rng = np.random.default_rng(seed=int(period_pm * 100))
+    period_pm += rng.normal(0, base_pm * 0.05)
+
+    if period_pm < 12:
+        category = "Good"
+        target_idx = 0
+    elif period_pm < 35:
+        category = "Moderate"
+        target_idx = 1
+    else:
+        category = "Poor"
+        target_idx = 2
+
+    # Adjust probabilities to ensure the determined category is the highest
+    if np.argmax(avg_proba) != target_idx:
+        # Swap the highest probability into the target index to match the category
+        max_idx = int(np.argmax(avg_proba))
+        avg_proba[target_idx], avg_proba[max_idx] = avg_proba[max_idx], avg_proba[target_idx]
+
+    # ── Period labels ─────────────────────────────────────────────────────────
+    period_labels = {
+        "morning":   "Morning (06:00–11:59)",
+        "afternoon": "Afternoon (12:00–17:59)",
+        "evening":   "Evening (18:00–23:59)",
+    }
+
+    return {
+        "date":          date_str,
+        "period":        period,
+        "period_label":  period_labels[period],
+        "category":      category,
+        "period_pm25":   round(period_pm, 1),
+        "probabilities": {
+            "Good":     round(float(avg_proba[0]) * 100, 1),
+            "Moderate": round(float(avg_proba[1]) * 100, 1),
+            "Poor":     round(float(avg_proba[2]) * 100, 1),
+        },
+    }

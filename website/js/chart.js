@@ -1,114 +1,67 @@
-/* global Chart */
+/* ─── 24-Hour Average Forecast Panel ─────────────────────────────────────── */
 
-let forecastChartInstance = null;
-
-function renderForecastChart(forecast24h) {
+function renderAvgForecast(avgPm25, category) {
     const section = document.getElementById("chartSection");
+    const container = document.getElementById("avgForecastPanel");
     section.classList.remove("hidden");
 
-    const labels = forecast24h.map((f) => f.label);
-    const values = forecast24h.map((f) => f.pm25);
-    const bgColors = forecast24h.map((f) => {
-        if (f.category === "Good") return "rgba(74,222,128,0.75)";
-        if (f.category === "Moderate") return "rgba(250,204,21,0.75)";
-        return "rgba(248,113,113,0.75)";
-    });
-    const borderColors = forecast24h.map((f) => {
-        if (f.category === "Good") return "#4ade80";
-        if (f.category === "Moderate") return "#facc15";
-        return "#f87171";
-    });
-
-    const ctx = document.getElementById("forecastChart").getContext("2d");
-
-    // Destroy old chart if exists
-    if (forecastChartInstance) {
-        forecastChartInstance.destroy();
+    // Determine colors
+    let color, bgColor, label;
+    if (category === "Good" || avgPm25 < 12) {
+        color = "#4ade80"; bgColor = "rgba(74,222,128,0.12)"; label = "Good";
+    } else if (category === "Moderate" || avgPm25 < 35) {
+        color = "#facc15"; bgColor = "rgba(250,204,21,0.12)"; label = "Moderate";
+    } else {
+        color = "#f87171"; bgColor = "rgba(248,113,113,0.12)"; label = "Poor";
     }
 
-    forecastChartInstance = new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: "PM2.5 (µg/m³)",
-                    data: values,
-                    backgroundColor: bgColors,
-                    borderColor: borderColors,
-                    borderWidth: 1.5,
-                    borderRadius: 6,
-                    borderSkipped: false,
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: 900, easing: "easeOutQuart" },
-            interaction: { intersect: false, mode: "index" },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: "hsl(220,22%,12%)",
-                    borderColor: "hsla(220,30%,55%,0.2)",
-                    borderWidth: 1,
-                    titleColor: "#f1f5f9",
-                    bodyColor: "#94a3b8",
-                    padding: 12,
-                    cornerRadius: 10,
-                    callbacks: {
-                        title: (items) => `Forecast ${items[0].label}`,
-                        label: (item) => ` PM2.5: ${item.raw} µg/m³`,
-                        afterLabel: (item) => {
-                            const d = forecast24h[item.dataIndex];
-                            return ` Category: ${d.category}`;
-                        },
-                    },
-                },
-            },
-            scales: {
-                x: {
-                    grid: { color: "hsla(220,30%,55%,0.08)" },
-                    ticks: {
-                        color: "#64748b",
-                        font: { family: "Inter", size: 11 },
-                        maxRotation: 45,
-                    },
-                },
-                y: {
-                    grid: { color: "hsla(220,30%,55%,0.08)" },
-                    ticks: {
-                        color: "#64748b",
-                        font: { family: "Inter", size: 11 },
-                        callback: (v) => `${v} µg/m³`,
-                    },
-                    beginAtZero: true,
-                },
-            },
-        },
+    // Gauge: max scale is 60 µg/m³ for visual clarity
+    const SCALE_MAX = 60;
+    const pctFill = Math.min(100, (avgPm25 / SCALE_MAX) * 100).toFixed(1);
+    const pctGood = ((12 / SCALE_MAX) * 100).toFixed(1);      // 12 µg/m³ marker
+    const pctMod = ((35 / SCALE_MAX) * 100).toFixed(1);      // 35 µg/m³ marker
+
+    container.innerHTML = `
+    <div class="avg-forecast-panel" style="--accent:${color}; --accent-bg:${bgColor};">
+      <div class="avg-top">
+        <div class="avg-metric">
+          <span class="avg-label">Predicted 24h Average</span>
+          <span class="avg-value">${avgPm25 !== null ? avgPm25.toFixed(1) : "—"}</span>
+          <span class="avg-unit">µg/m³ PM2.5</span>
+        </div>
+        <div class="avg-badge" style="background:${bgColor}; color:${color}; border:1px solid ${color}40;">
+          ${label}
+        </div>
+      </div>
+
+      <!-- Gradient gauge bar -->
+      <div class="gauge-wrap">
+        <div class="gauge-track">
+          <div class="gauge-fill" style="width:${pctFill}%; background:${color};"></div>
+          <!-- Threshold tick: Good / Moderate -->
+          <div class="gauge-tick" style="left:${pctGood}%;" title="12 µg/m³ — Good limit"></div>
+          <div class="gauge-tick" style="left:${pctMod}%;"  title="35 µg/m³ — Moderate limit"></div>
+        </div>
+        <div class="gauge-labels">
+          <span>0</span>
+          <span style="left:${pctGood}%" class="gauge-threshold-label">12</span>
+          <span style="left:${pctMod}%"  class="gauge-threshold-label">35</span>
+          <span class="gauge-max">${SCALE_MAX}+</span>
+        </div>
+      </div>
+
+      <p class="avg-note">
+        Based on the model's <strong>target_24h_avg</strong> output —
+        the expected mean PM2.5 concentration over the next 24 hours.
+      </p>
+    </div>
+  `;
+
+    // Animate fill after paint
+    requestAnimationFrame(() => {
+        const fill = container.querySelector(".gauge-fill");
+        if (fill) {
+            fill.style.transition = "width 1s cubic-bezier(0.34,1.1,0.64,1)";
+        }
     });
-
-    // Reference lines
-    const thresholdPlugin = {
-        id: "thresholds",
-        afterDraw(chart) {
-            const { ctx: c, chartArea: { left, right }, scales: { y } } = chart;
-            [[12, "#4ade80"], [35, "#f87171"]].forEach(([val, color]) => {
-                const yPos = y.getPixelForValue(val);
-                c.save();
-                c.beginPath();
-                c.setLineDash([5, 4]);
-                c.strokeStyle = color + "66";
-                c.lineWidth = 1.5;
-                c.moveTo(left, yPos);
-                c.lineTo(right, yPos);
-                c.stroke();
-                c.restore();
-            });
-        },
-    };
-
-    forecastChartInstance.config.plugins = [thresholdPlugin];
-    forecastChartInstance.update();
 }

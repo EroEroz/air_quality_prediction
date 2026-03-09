@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import os
 import predictor
@@ -32,6 +32,20 @@ def predict():
 def current():
     try:
         result = predictor.current_district_data()
+        return jsonify({"status": "ok", "data": result})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/day-period", methods=["POST"])
+def day_period():
+    try:
+        body   = request.get_json(force=True) or {}
+        date   = body.get("date", "")
+        period = body.get("period", "morning")
+        if not date:
+            return jsonify({"status": "error", "message": "date is required"}), 400
+        result = predictor.predict_day_period(date, period)
         return jsonify({"status": "ok", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
