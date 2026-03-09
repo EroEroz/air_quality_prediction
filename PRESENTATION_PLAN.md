@@ -68,6 +68,15 @@
   [Final Classification: Good / Moderate / Poor]
 ```
 
+### Experiment Tracking with WandB
+- **Reproducibility:** All training and threshold-tuning experiments are logged to Weights & Biases (WandB).
+- **Metrics Tracked:**
+  - Per-model accuracy, precision, recall, F1-scores
+  - SMOTE class distribution before/after
+  - Threshold sweep results across 7 different thresholds
+  - Confusion matrices and classification reports
+- **Purpose:** Enable transparent, reproducible machine learning with full experiment history accessible to the team.
+
 ---
 
 ## Slide 6: Production Design — Single-Model Architecture & Heuristic UX
@@ -98,6 +107,7 @@
 ## Slide 8: Conclusion & Future Work
 - **Achievement:** Improved "Poor" air quality detection recall from **60% → 84%** over the Present 1 baseline.
 - **Engineering Contribution:** Solved the Model Contradiction problem using a Single-Model + Domain Heuristic architecture.
+- **Reproducibility:** All experiments tracked in WandB with full metric history, dataset configs, and model artifacts.
 - **Methods are time-series appropriate:** All features are lag-based, capturing the temporal inertia of pollution data.
 - **Future Scope:**
   - Integrate live API data feeds (OpenAQ real-time).
