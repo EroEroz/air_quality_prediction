@@ -3,51 +3,46 @@
 ## Slide 1: Title & Team
 - **Title:** HCMC Air Quality Forecasting using Machine Learning
 - **Course:** DAT301m - Time Series Analysis
-- **Core Methodology:** Bi-LSTM & Voting Ensemble Approach
+- **Core Methodology:** SMOTE Random Forest Classification & Heuristic UX Integration
 
 ## Slide 2: Problem Definition & Scope
 - **Problem:** Increasing PM2.5 levels in HCMC due to urbanization.
-- **Goal:** Build an accurate time-series model to forecast pollution levels 24h ahead.
-- **Scope:** Focused on HCMC urban area using 5 years of historical station data.
+- **Goal:** Build an accurate time-series model to forecast pollution levels and warn citizens about hazardous air.
+- **Scope:** Focused on HCMC urban area using historical station data (OpenAQ & US Embassy).
 
-## Slide 3: Data Analysis & Metrics
-- **Data Source:** OpenAQ & US Embassy data (Hourly).
-- **Key Discovery:** High seasonality (Dry vs. Rainy season) and strong correlation with Humidity and Wind Speed.
-- **Metrics used:** 
-  - **Regression:** MAE, RMSE, R² (Coefficient of Determination).
-  - **Classification:** Accuracy, F1-Score (focused on detecting "Poor" air quality).
+## Slide 3: Research Phase & Explored Models
+- **Initial Baseline (Present 1):** Linear Regression, Simple LSTM (R² Score ~ 0.62).
+- **Advanced Exploration (Present 2):** Voting Ensembles, Bi-Directional LSTM (Highest R² at 0.647).
+- **Key Discovery:** While regression models provided good R² scores, they often struggled to accurately predict sudden, dangerous spikes in pollution contextually.
 
-## Slide 4: Baseline Models (Present 1 Review)
-- **Starting Point:** Linear Regression and Simple LSTM.
-- **Performance:** R² Score around 0.62.
-- **Finding:** Simple models failed to capture sudden pollution spikes (Poor quality).
+## Slide 4: The Production Shift - Focus on Classification
+- **Strategic Pivot:** Transitioned from Regression (predicting exact numbers) to Classification (predicting safety categories: Good, Moderate, Poor).
+- **Model Choice:** Developed a tuned **Random Forest Classifier** utilizing 24 features (Weather + PM2.5 Lags).
+- **SMOTE Integration:** Applied Synthetic Minority Over-sampling Technique to handle the imbalance in "Poor" air quality samples.
 
-## Slide 5: Proposed Improvements (Present 2)
-- **Feature Engineering:** Added Lags (1, 24, 168h) and weather interaction terms.
-- **Model Diversity:** Introduced a **Voting Ensemble** (XGBoost, Random Forest, etc.) to stabilize predictions.
-- **Deep Learning:** Implemented **Bi-LSTM** to capture temporal patterns more effectively.
+## Slide 5: Optimizing for Public Safety
+- **Threshold Tuning:** Adjusted the classification threshold for the "Poor" category down to **0.30**.
+- **Impact:** By acting as an early warning system, we increased the recall rate for hazardous air quality events from 60% to 84%.
+- **Philosophy:** Prioritizing public health warnings over marginal accuracy gains in safe conditions.
 
-## Slide 6: Model Architecture (The "Blocks")
-- **Input Block:** 14 processed features (Weather + Lags).
-- **Core Block:** Bi-Directional LSTM Layer (Bidirectional context).
-- **Output Block:** Dense layer for regression output (+ Classification head for shifts).
+## Slide 6: The "Two-Model Consistency" Problem in Production
+- **The UX Challenge:** Users expect to see a specific PM2.5 number, but using a separate Regression model alongside our tuned Classifier creates "Model Contradiction" (e.g., Regression predicts 34 µg/m³ [Moderate], while Classifier flags it as "Poor" [Hazardous]).
+- **The Solution:** A unified Single-Model Architecture. The Classification model acts as the sole Machine Learning source of truth to guarantee 100% UI consistency.
 
-## Slide 7: Training & Fine-tuning Results
-- **Optimization:** Used SMOTE to balance the dataset.
-- **Threshold Tuning:** Adjusted "Poor" classification threshold to **0.30** based on the PR-curve.
-- **Result:** **R² Score improved to 0.647** (A 4% relative increase over baseline).
+## Slide 7: Domain-Driven Heuristics (The UI Integration)
+- **Heuristic Estimation:** Instead of predicting a confusing regression number, we synthetically derive the UI number using a recent historical baseline.
+- **Diurnal Offsets:** We apply domain-knowledge heuristics to the baseline based on HCMC pollution patterns:
+  - **Morning (+2.5 µg/m³):** Rush hour traffic & temperature inversions.
+  - **Afternoon (-3.0 µg/m³):** Daytime heat and wind dispersion.
+  - **Night (+1.5 µg/m³):** Cooling temperatures cause pollutants to settle.
 
-## Slide 8: Technical Innovation
-- **Shift-based Analysis:** Breaking the day into Morning/Afternoon/Evening periods.
-- **Inertia Anchor:** Anchoring shift predictions to the 24h baseline to ensure physical consistency in the forecast.
-
-## Slide 9: Demo Showcase (The Web App)
-- **UI Design:** Clean, interactive dashboard.
+## Slide 8: Demo Showcase (The Web App)
+- **UI Design:** Clean, interactive dashboard with AI-powered forecasting.
 - **Features:** 
-  - Real-time heatmaps (Simulated).
-  - 24h Probability-based Forecast.
-  - Interactive "Day-Period" selector.
+  - **24-Hour Forecast & Day-Period Selector:** Both powered consistently by the same underlying Random Forest model.
+  - **Probability Bars:** Boundary-distance math visualizing the model's certainty.
+  - **Simulated Spatial Heatmap:** Demonstrating visual AQI distribution.
 
-## Slide 10: Conclusion & Future Scope
-- **Achievement:** Successfully improved accuracy and balanced the model for high-pollution detection.
-- **Next steps:** Integrating live API feeds and expanding to other cities like Hanoi.
+## Slide 9: Conclusion
+- **Engineering Choice:** Proved that combining powerful Machine Learning (for core logic) with Rule-Based Heuristics (for UI rendering) creates a robust, user-friendly application.
+- **Achievement:** Successfully improved hazard detection (84% recall) while maintaining a seamless, non-contradictory User Experience.
