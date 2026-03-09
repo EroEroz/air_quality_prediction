@@ -11,7 +11,7 @@
 - **Scope:** Focused on HCMC urban area using 5 years of historical station data.
 
 ## Slide 3: Data Analysis & Metrics
-- **Data Source:** OpenAQ & US Embassy data (Hourly).
+- **Data Source:** Open Meteo.
 - **Key Discovery:** High seasonality (Dry vs. Rainy season) and strong correlation with Humidity and Wind Speed.
 - **Metrics used:** 
   - **Regression:** MAE, RMSE, R² (Coefficient of Determination).
