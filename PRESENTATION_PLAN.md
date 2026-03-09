@@ -19,7 +19,7 @@
 ---
 
 ## Slide 3: Data Analysis & Key Metrics
-- **Data Source:** OpenAQ & US Embassy (Hourly resolution), later aggregated to Shift-based (Morning/Afternoon/Night).
+- **Data Source:** Open Meteo (Hourly resolution), later aggregated to Shift-based (Morning/Afternoon/Night).
 - **Features Engineered:**
   - Weather: Temperature, Humidity, Wind Speed/Direction, Pressure, Precipitation, Cloud Cover.
   - Pollutants: PM10, CO, NO2, SO2, O3.
