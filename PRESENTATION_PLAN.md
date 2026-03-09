@@ -70,34 +70,7 @@
 
 ---
 
-## Slide 6: Training Results & WandB Logging
-
-### Threshold Tuning Results (Logged in WandB)
-| Threshold | Poor Recall | Poor Precision | F1 (Poor) |
-|---|---|---|---|
-| 0.50 (default) | 60% | ~72% | ~65% |
-| **0.30 (tuned)** | **84%** | ~58% | **~69%** |
-
-- **WandB:** Training run metrics (loss, accuracy, recall per epoch/fold) were logged to WandB for reproducibility.
-- **Key Improvement:** By lowering the threshold, we sacrificed some Precision (more false alarms) in exchange for dramatically higher Recall (fewer missed hazardous events). For a public health application, **missing a "Poor" day is far more dangerous than a false alarm**.
-
-### Code Reference: Threshold Classification
-```python
-# predictor.py — _classify_with_threshold()
-POOR_THRESHOLD = 0.30
-def _classify_with_threshold(proba):
-    if proba[2] >= POOR_THRESHOLD:   # P(Poor) ≥ 0.30 → classify as Poor
-        pred_idx = 2
-    elif proba[0] >= 0.40:
-        pred_idx = 0
-    else:
-        pred_idx = 1
-    return pred_idx, proba
-```
-
----
-
-## Slide 7: Production Design — Single-Model Architecture & Heuristic UX
+## Slide 6: Production Design — Single-Model Architecture & Heuristic UX
 
 ### The "Model Contradiction" Problem
 - Running a Regression model (for the number) alongside a Classifier (for the category) causes contradiction: Regression might output "34.0 µg/m³ → Moderate" while the Classifier outputs "Poor". This confuses users.
@@ -112,7 +85,7 @@ def _classify_with_threshold(proba):
 
 ---
 
-## Slide 8: Live Demo (Web App)
+## Slide 7: Live Demo (Web App)
 - **Backend:** Flask API serving the `aqi_model.pkl` Random Forest Classifier.
 - **Frontend:** Vanilla JS + Leaflet.js dashboard.
 - **Features to demonstrate:**
@@ -122,7 +95,7 @@ def _classify_with_threshold(proba):
 
 ---
 
-## Slide 9: Conclusion & Future Work
+## Slide 8: Conclusion & Future Work
 - **Achievement:** Improved "Poor" air quality detection recall from **60% → 84%** over the Present 1 baseline.
 - **Engineering Contribution:** Solved the Model Contradiction problem using a Single-Model + Domain Heuristic architecture.
 - **Methods are time-series appropriate:** All features are lag-based, capturing the temporal inertia of pollution data.
