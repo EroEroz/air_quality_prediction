@@ -1,0 +1,32 @@
+{
+  "best_model_name": "VotingClassifier",
+  "best_f1_macro": 0.6425860798866193,
+  "class_names": [
+    "Good",
+    "Moderate",
+    "Poor"
+  ],
+  "target_mapping": {
+    "0": "Good",
+    "1": "Moderate",
+    "2": "Poor"
+  },
+  "linear_models": [
+    "logistic_regression.pkl",
+    "xgboost.pkl",
+    "lightgbm.pkl",
+    "random_forest.pkl"
+  ],
+  "deep_models": [
+    "lstm_model.keras",
+    "bilstm_model.keras"
+  ],
+  "preprocessing": {
+    "scaler": "scaler_X_linear.pkl",
+    "feature_columns": "feature_cols_linear.pkl"
+  },
+  "manual_soft_voting": {
+    "enabled": true,
+    "formula": "(xgb_proba + lgb_proba + rf_proba + lr_proba) / 4"
+  }
+}
