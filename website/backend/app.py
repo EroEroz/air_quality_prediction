@@ -43,9 +43,11 @@ def day_period():
         body   = request.get_json(force=True) or {}
         date   = body.get("date", "")
         period = body.get("period", "morning")
-        if not date:
-            return jsonify({"status": "error", "message": "date is required"}), 400
-        result = predictor.predict_day_period(date, period)
+        # Map old period inputs to new Shift expectations
+        shift_map = {"morning": "Morning", "afternoon": "Afternoon", "evening": "Night"}
+        shift_value = shift_map.get(period.lower(), "Morning")
+        
+        result = predictor.predict_shift(date, shift_value)
         return jsonify({"status": "ok", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
