@@ -48,6 +48,11 @@ def day_period():
         shift_value = shift_map.get(period.lower(), "Morning")
         
         result = predictor.predict_shift(date, shift_value)
+        
+        # Map back to old UI format so grid lookup succeeds
+        if result["period"] == "night":
+            result["period"] = "evening"
+
         return jsonify({"status": "ok", "data": result})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

@@ -37,10 +37,7 @@ function updateCurrentStatus(pm25) {
     statusEl.textContent = label;
     statusEl.className = `metric-value status-badge ${cls}`;
 
-    // Last updated
-    const now = new Date();
-    document.getElementById("lastUpdated").textContent =
-        now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+    // Data period is now static in HTML ("Jan 2026"), no live timestamp needed
 }
 
 // ── Prediction ────────────────────────────────────────────────────────────────

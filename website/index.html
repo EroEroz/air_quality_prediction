@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AirPulse HCMC — Air Quality Forecast</title>
   <meta name="description"
-    content="Real-time PM2.5 air quality monitoring and 24-hour AI-powered forecast for Ho Chi Minh City, Vietnam." />
+    content="PM2.5 air quality analysis and AI-powered forecast for Ho Chi Minh City, Vietnam — a DAT301m time-series project." />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -50,8 +50,7 @@
       <span class="brand-city">HCMC</span>
     </div>
     <div class="nav-status">
-      <span class="live-dot" id="liveDot"></span>
-      <span class="live-label">LIVE</span>
+      <span class="live-label">DEMO</span>
     </div>
   </nav>
 
@@ -70,12 +69,12 @@
         AI-Powered Forecast
       </div>
       <h1 class="hero-title">Ho Chi Minh City<br /><span class="gradient-text">Air Quality</span></h1>
-      <p class="hero-subtitle">Real-time PM2.5 monitoring &amp; 24-hour AI prediction powered by Bi-LSTM and ensemble
-        models</p>
+      <p class="hero-subtitle">PM2.5 air quality analysis &amp; AI prediction powered by classification
+        models &mdash; DAT301m Time-Series Project</p>
 
       <div class="current-aqi-strip" id="currentAqiStrip">
         <div class="aqi-metric">
-          <span class="metric-label">Current PM2.5</span>
+          <span class="metric-label">Latest PM2.5</span>
           <span class="metric-value" id="currentPm25">—</span>
           <span class="metric-unit">µg/m³</span>
         </div>
@@ -86,8 +85,8 @@
         </div>
         <div class="aqi-divider"></div>
         <div class="aqi-metric">
-          <span class="metric-label">Updated</span>
-          <span class="metric-value" id="lastUpdated">—</span>
+          <span class="metric-label">Data Period</span>
+          <span class="metric-value" id="lastUpdated">Jan 2026</span>
         </div>
       </div>
     </div>
@@ -104,9 +103,9 @@
             <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
               <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" />
             </svg>
-            Live District Heatmap
+            District Heatmap
           </h2>
-          <span class="refresh-hint">Auto-refreshes every 60s</span>
+          <span class="refresh-hint">Based on historical data</span>
         </div>
         <div id="map"></div>
         <div class="map-legend">
@@ -240,48 +239,14 @@
       </div>
     </section>
 
-    <!-- COMING SOON ──────────────────────────────────────────────────────── -->
-    <section class="coming-soon-section">
-      <h2 class="section-title">More Cities Coming Soon</h2>
-      <div class="cities-grid">
-        <div class="city-card active">
-          <div class="city-icon">🏙️</div>
-          <div class="city-name">Ho Chi Minh City</div>
-          <div class="city-status live">Live Now</div>
-        </div>
-        <div class="city-card">
-          <div class="city-icon">🏛️</div>
-          <div class="city-name">Hà Nội</div>
-          <div class="city-status soon">Coming Soon</div>
-        </div>
-        <div class="city-card">
-          <div class="city-icon">🌊</div>
-          <div class="city-name">Đà Nẵng</div>
-          <div class="city-status soon">Coming Soon</div>
-        </div>
-        <div class="city-card">
-          <div class="city-icon">🎪</div>
-          <div class="city-name">Cần Thơ</div>
-          <div class="city-status soon">Coming Soon</div>
-        </div>
-        <div class="city-card">
-          <div class="city-icon">⛰️</div>
-          <div class="city-name">Đà Lạt</div>
-          <div class="city-status soon">Coming Soon</div>
-        </div>
-        <div class="city-card">
-          <div class="city-icon">🏖️</div>
-          <div class="city-name">Nha Trang</div>
-          <div class="city-status soon">Coming Soon</div>
-        </div>
-      </div>
-    </section>
+
 
   </main>
 
   <!-- ═══════════════════════════════ FOOTER ════════════════════════════════ -->
   <footer class="footer">
-    <p>AirPulse HCMC &mdash; Powered by Bi-LSTM &amp; Voting Ensemble Model &mdash; Data: US Embassy / OpenAQ</p>
+    <p>AirPulse HCMC &mdash; DAT301m Time-Series Project &mdash; Powered by Classification &amp; Ensemble Models &mdash;
+      Data: US Embassy / OpenAQ</p>
   </footer>
 
   <!-- Scripts -->
