@@ -1,0 +1,97 @@
+﻿python : C:\Users\Admin\AppData\Lo
+cal\Programs\Python\Python312\Lib\
+site-packages\sklearn\base.py:463:
+ InconsistentVersionWarning: 
+Trying to unpickle estimator 
+DecisionTreeClassifier from 
+version 1.6.1 when using version 
+1.8.0. This might lead to 
+breaking code or invalid results. 
+Use at your own risk. For more 
+info please refer to:
+At line:1 char:1
++ python tests/threshold_test.py 
+2>&1 | Out-File -FilePath 
+tests/thresh ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~
+    + CategoryInfo          : Not 
+   Specified: (C:\Users\Admin\..  
+  .lease refer to::String) [],    
+ RemoteException
+    + FullyQualifiedErrorId : Nat 
+   iveCommandError
+ 
+https://scikit-learn.org/stable/mo
+del_persistence.html#security-main
+tainability-limitations
+  warnings.warn(
+C:\Users\Admin\AppData\Local\Progr
+ams\Python\Python312\Lib\site-pack
+ages\sklearn\base.py:463: 
+InconsistentVersionWarning: 
+Trying to unpickle estimator 
+RandomForestClassifier from 
+version 1.6.1 when using version 
+1.8.0. This might lead to 
+breaking code or invalid results. 
+Use at your own risk. For more 
+info please refer to:
+https://scikit-learn.org/stable/mo
+del_persistence.html#security-main
+tainability-limitations
+  warnings.warn(
+Loading model and data...
+Traceback (most recent call last):
+  File "C:\Users\Admin\Desktop\SP2
+026\DAT301m\air_quality_prediction
+\tests\threshold_test.py", line 
+83, in <module>
+
+============================================================
+BASELINE (Default threshold = 0.5)
+============================================================
+              precision    recall  f1-score   support
+
+        Good       0.36      0.50      0.42        20
+    Moderate       0.74      0.98      0.85       956
+        Poor       1.00      0.60      0.75       787
+
+    accuracy                           0.81      1763
+   macro avg       0.70      0.69      0.67      1763
+weighted avg       0.85      0.81      0.80      1763
+
+Confusion Matrix:
+[[ 10  10   0]
+ [ 18 936   2]
+ [  0 313 474]]
+Macro F1: 0.6708
+
+============================================================
+THRESHOLD COMPARISON (varying 'Poor' probability threshold)
+============================================================
+ Threshold   Accuracy    MacroF1   PoorRecall   PoorPrecision
+------------------------------------------------------------
+      0.20     0.7992     0.6889       0.6404          0.9474
+      0.25     0.7998     0.6882       0.6201          0.9780
+      0.30     0.7986     0.6869       0.6112          0.9877
+      0.33     0.7986     0.6867       0.6086          0.9917
+      0.35     0.7969     0.6854       0.6048          0.9917
+      0.40     0.7969     0.6853       0.6036          0.9937
+      0.45     0.7975     0.6857       0.6036          0.9958
+    print(f"\n\u2705 Best 
+threshold by Macro F1: 
+{best['poor_threshold']}")
+  File "C:\Users\Admin\AppData\Loc
+al\Programs\Python\Python312\Lib\e
+ncodings\cp1252.py", line 19, in 
+encode
+    return codecs.charmap_encode(i
+nput,self.errors,encoding_table)[0
+]
+           ^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' 
+codec can't encode character 
+'\u2705' in position 2: character 
+maps to <undefined>

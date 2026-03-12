@@ -1,48 +1,150 @@
-# HCMC Air Quality Forecasting
+# HCMC Air Quality Classification (DAT301m)
 
-> A Deep Learning project analyzing and forecasting PM2.5 pollution levels in Ho Chi Minh City using neural network.
+Shift-based air quality classification project for Ho Chi Minh City using weather + pollutant features, lag engineering, SMOTE balancing, Random Forest training, threshold tuning, and a Flask web demo.
 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
-![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange)
+## What This Project Does
 
-## Project Overview
-This project investigates the application of Deep Learning to forecast air quality in Ho Chi Minh City. By analyzing 5 years of hourly PM2.5 data (2018–2022).
+- Predicts AQI class at shift level: `Good`, `Moderate`, `Poor`
+- Uses time-series aware features (lag-1, lag-2, lag-3, lag-6)
+- Handles class imbalance with SMOTE on training data only
+- Tunes the `Poor` decision threshold (default `0.50` -> tested down to `0.20`)
+- Exposes predictions through a Flask backend + frontend dashboard
+- Logs experiments and threshold sweeps to Weights and Biases (WandB)
 
+## Project Structure
 
-## Data & Processing
-* **Source:** US Diplomatic Post (Ho Chi Minh City) & OpenAQ (CMT8 Station Validation).
-* **Timeframe:** 2018–2022 (Hourly Resolution).
-* **Preprocessing Pipeline:**
-    * **Timezone Correction:** Converted UTC to Local Time (UTC+7) to align with traffic patterns.
-    * **Physics Check:** Removed outliers (<0 or >500 µg/m³).
-    * **Resampling:** Strict hourly grid enforcement with linear interpolation for small gaps (<4h).
-    * **Feature Engineering:** Generated Lag features (1h, 24h, 168h/1 week) and Cyclical Time features (Sin/Cos of Hour, Day, Month).
+- `feature_engineering.py`: builds `processed_data.csv` from raw hourly data
+- `model-training.ipynb`: model training, evaluation, export (`aqi_model.pkl` + demo data)
+- `tests/threshold_test.py`: threshold sweep and reporting
+- `tests/run_threshold.py`: threshold sweep + WandB logging
+- `website/backend/app.py`: Flask API
+- `website/backend/predictor.py`: model loading and prediction logic
+- `saved_models/`: exported model(s)
+- `tests/demo_forecast_data.csv`: test/demo data used by API and threshold scripts
 
-## Model Architecture
+## Data
 
-* **Input:** (Batch, 1, 14 Features)
-* **Layer 1:** `64 Units` + `Dropout(0.2)`
-* **Layer 2:** `32 Units` + `Dropout(0.2)`
-* **Output:** `Dense(1 Unit)`
-    * *Role:* Regression output for PM2.5 concentration.
+Current source in this repository is Open Meteo-based weather data merged for AQI modeling.
 
-## Results (Test Set 2022)
+Main raw input used by feature engineering:
 
-| Model Architecture | MAE (µg/m³) | RMSE (µg/m³) | R² Score |
-| :--- | :--- | :--- | :--- |
-| **Linear Regression** | 5.71 | 8.54 | 0.628 |
-| **LSTM** | 5.60 | 8.35 | 0.644 |
-| **Bi-LSTM** | **5.56** | **8.31** | **0.647** |
+- `data/hcmc_weather_and_aqi.csv`
 
-*Note: Metrics reflect the latest run with fixed seeds.*
+Feature engineering output:
 
-**Visual Validation:**
+- `processed_data.csv`
 
-![Forecast Plot](pictures/output.png)
+### AQI Class Rules (from PM2.5)
 
-## Installation & Usage
+- `0` -> Good: `pm2_5 <= 12.0`
+- `1` -> Moderate: `12.0 < pm2_5 <= 35.4`
+- `2` -> Poor: `pm2_5 > 35.4`
 
-### 1. Clone the Repo
+## Setup
+
+Use Python 3.9+ (Conda or venv).
+
+### 1) Install dependencies for model work
+
 ```bash
-git clone [https://github.com/yourusername/hcmc-air-quality-lstm.git](https://github.com/yourusername/hcmc-air-quality-lstm.git)
-cd hcmc-air-quality-lstm
+pip install pandas numpy scikit-learn imbalanced-learn xgboost lightgbm catboost joblib matplotlib seaborn wandb
+```
+
+### 2) Install dependencies for web backend
+
+```bash
+pip install -r website/backend/requirements.txt
+```
+
+## End-to-End Workflow
+
+### Step 1: Build processed dataset
+
+```bash
+python feature_engineering.py
+```
+
+Expected output:
+
+- `processed_data.csv`
+
+### Step 2: Train and export model
+
+Open and run all cells in:
+
+- `model-training.ipynb`
+
+Expected outputs:
+
+- `aqi_model.pkl` (best model)
+- `demo_forecast_data.csv` (test set with actual/predicted labels)
+
+### Step 3: Threshold tuning
+
+```bash
+python tests/threshold_test.py
+```
+
+or
+
+```bash
+python tests/run_threshold.py
+```
+
+This prints baseline metrics, threshold comparison table, best threshold by macro F1, and confusion matrix.
+
+## WandB Logging
+
+WandB logging is integrated in both:
+
+- `model-training.ipynb`
+- `tests/run_threshold.py` and `tests/threshold_test.py`
+
+### One-time login
+
+```bash
+wandb login
+```
+
+### Run threshold tuning with WandB
+
+PowerShell:
+
+```powershell
+$env:USE_WANDB="1"
+$env:WANDB_PROJECT="dat301m-air-quality"
+$env:WANDB_RUN_NAME="threshold-tuning"
+python tests/run_threshold.py
+```
+
+If you want to disable logging:
+
+```powershell
+$env:USE_WANDB="0"
+python tests/run_threshold.py
+```
+
+## Run the Web Demo
+
+From project root:
+
+```bash
+python website/backend/app.py
+```
+
+Open:
+
+- `http://localhost:5000`
+
+Useful API endpoints:
+
+- `GET /api/health`
+- `GET /api/predict`
+- `GET /api/current`
+- `POST /api/day-period`
+
+## Notes
+
+- SMOTE is applied only to training data to avoid leakage.
+- `predictor.py` uses a tuned `POOR_THRESHOLD = 0.30` for the shift-based classifier.
+- The repository still contains older regression artifacts for reference, but current presentation/training focus is classification.
