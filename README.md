@@ -7,7 +7,7 @@ Shift-based air quality classification project for Ho Chi Minh City using weathe
 - Predicts AQI class at shift level: `Good`, `Moderate`, `Poor`
 - Uses time-series aware features (lag-1, lag-2, lag-3, lag-6)
 - Handles class imbalance with SMOTE on training data only
-- Tunes the `Poor` decision threshold (default `0.50` -> tested down to `0.20`)
+- Tunes the `Poor` decision threshold (default `0.50` -> tested down to `0.30`)
 - Exposes predictions through a Flask backend + frontend dashboard
 - Logs experiments and threshold sweeps to Weights and Biases (WandB)
 
